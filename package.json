@@ -13,7 +13,8 @@
     "client:list": "ts-node scripts/client.ts list",
     "client:show": "ts-node scripts/client.ts show",
     "client:remove": "ts-node scripts/client.ts remove",
-    "e2e": "node scripts/e2e-smoke.mjs"
+    "e2e": "node scripts/e2e-smoke.mjs",
+    "smtp:verify": "node scripts/smtp-verify.mjs"
   },
   "dependencies": {
     "@nestjs/common": "^11.0.0",
@@ -22,6 +23,7 @@
     "@types/nodemailer": "^8.0.0",
     "bcrypt": "^5.1.1",
     "better-sqlite3": "^11.3.0",
+    "dotenv": "^17.4.2",
     "express": "^4.21.0",
     "nodemailer": "^8.0.7",
     "oidc-provider": "^9.8.3",
