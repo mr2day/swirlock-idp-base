@@ -14,7 +14,8 @@
     "client:show": "ts-node scripts/client.ts show",
     "client:remove": "ts-node scripts/client.ts remove",
     "e2e": "node scripts/e2e-smoke.mjs",
-    "smtp:verify": "node scripts/smtp-verify.mjs"
+    "smtp:verify": "node scripts/smtp-verify.mjs",
+    "email:test": "ts-node scripts/send-test-email.ts"
   },
   "dependencies": {
     "@nestjs/common": "^11.0.0",
