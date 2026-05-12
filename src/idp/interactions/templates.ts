@@ -1,3 +1,5 @@
+import { DEFAULT_THEME, type PersonaTheme } from './personas';
+
 function escape(s: string): string {
   return s
     .replace(/&/g, '&amp;')
@@ -8,24 +10,11 @@ function escape(s: string): string {
 }
 
 /**
- * Mobile-first dark theme matching the Gigi-the-Robot persona in
- * swirlock-chatbot-ui. Tokens kept in sync with
- * `swirlock-chatbot-ui/src/app/core/personas/gigi-the-robot.persona.ts`.
+ * Mobile-first dark theme. Persona-specific color tokens are injected
+ * per-request via `themeVars()` so the same stylesheet skins to match
+ * whichever persona the relying party bubbled in via `?persona=...`.
  */
 const STYLE = `
-:root {
-  --bg: #262627;
-  --surface: #1f1f20;
-  --surface-elevated: #2c2c2e;
-  --border: rgba(255, 255, 255, 0.08);
-  --text-primary: #f5f5f5;
-  --text-secondary: rgba(245, 245, 245, 0.65);
-  --text-muted: rgba(245, 245, 245, 0.4);
-  --accent: #f5b916;
-  --accent-contrast: #1a1a1b;
-  --danger: #ff6b6b;
-  --ok: #7ee896;
-}
 * { box-sizing: border-box; }
 html, body { margin: 0; padding: 0; }
 body {
@@ -186,21 +175,38 @@ button.secondary:hover, .btn.secondary:hover {
 }
 `;
 
-const HEAD = (title: string) =>
+function themeVars(theme: PersonaTheme): string {
+  return `:root {
+  --bg: ${theme.bg};
+  --surface: ${theme.surface};
+  --surface-elevated: ${theme.surfaceElevated};
+  --border: rgba(255, 255, 255, 0.08);
+  --text-primary: #f5f5f5;
+  --text-secondary: rgba(245, 245, 245, 0.65);
+  --text-muted: rgba(245, 245, 245, 0.4);
+  --accent: ${theme.accent};
+  --accent-contrast: ${theme.accentContrast};
+  --danger: #ff6b6b;
+  --ok: #7ee896;
+}`;
+}
+
+const HEAD = (title: string, theme: PersonaTheme = DEFAULT_THEME) =>
   `<meta charset="utf-8">` +
   `<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">` +
   `<title>${escape(title)}</title>` +
-  `<style>${STYLE}</style>`;
+  `<style>${themeVars(theme)}${STYLE}</style>`;
 
 export function loginPage(opts: {
   uid: string;
   clientName: string;
   email?: string;
   error?: string;
+  theme?: PersonaTheme;
 }): string {
   const uid = escape(opts.uid);
   return `<!doctype html>
-<html><head>${HEAD('Sign in')}</head>
+<html><head>${HEAD('Sign in', opts.theme)}</head>
 <body><div class="card">
   <h1>Sign in</h1>
   <div class="sub">${escape(opts.clientName)}</div>
@@ -223,10 +229,11 @@ export function signupPage(opts: {
   clientName: string;
   email?: string;
   error?: string;
+  theme?: PersonaTheme;
 }): string {
   const uid = escape(opts.uid);
   return `<!doctype html>
-<html><head>${HEAD('Create account')}</head>
+<html><head>${HEAD('Create account', opts.theme)}</head>
 <body><div class="card">
   <h1>Create account</h1>
   <div class="sub">${escape(opts.clientName)}</div>
@@ -256,11 +263,12 @@ export function verifyEmailPage(opts: {
   verificationId: string;
   error?: string;
   info?: string;
+  theme?: PersonaTheme;
 }): string {
   const uid = escape(opts.uid);
   const vid = escape(opts.verificationId);
   return `<!doctype html>
-<html><head>${HEAD('Confirm your email')}</head>
+<html><head>${HEAD('Confirm your email', opts.theme)}</head>
 <body><div class="card">
   <h1>Confirm your email</h1>
   <div class="sub">We sent a 6-digit code to <strong>${escape(opts.email)}</strong> for ${escape(opts.clientName)}.</div>
@@ -306,6 +314,7 @@ export function consentPage(opts: {
   uid: string;
   clientName: string;
   scopes: string[];
+  theme?: PersonaTheme;
 }): string {
   const items = opts.scopes.length
     ? `<ul class="scopes">${opts.scopes
@@ -316,7 +325,7 @@ export function consentPage(opts: {
         .join('')}</ul>`
     : '<p class="sub">No additional permissions requested.</p>';
   return `<!doctype html>
-<html><head>${HEAD('Authorize')}</head>
+<html><head>${HEAD('Authorize', opts.theme)}</head>
 <body><div class="card">
   <h1>Allow ${escape(opts.clientName)} to:</h1>
   ${items}
@@ -341,9 +350,10 @@ export function logoutPage(opts: {
   clientName: string;
   form: string;
   stayUrl: string;
+  theme?: PersonaTheme;
 }): string {
   return `<!doctype html>
-<html><head>${HEAD('Sign out')}</head>
+<html><head>${HEAD('Sign out', opts.theme)}</head>
 <body><div class="card">
   <h1>Sign out?</h1>
   <div class="sub">You will be signed out of ${escape(opts.clientName)}.</div>

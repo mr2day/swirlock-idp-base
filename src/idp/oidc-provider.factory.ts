@@ -6,6 +6,7 @@ import { loadOrGenerateJwks, loadOrGenerateCookieKeys } from './keys/jwks';
 import { SqliteAdapter } from './storage/sqlite-adapter';
 import { db } from './storage/db';
 import { logoutPage } from './interactions/templates';
+import { resolveTheme } from './interactions/personas';
 
 const importESM = new Function('m', 'return import(m)') as <T>(m: string) => Promise<T>;
 
@@ -31,6 +32,10 @@ export async function mountOidcProvider(expressApp: Express): Promise<void> {
       profile: ['email', 'email_verified'],
     },
     scopes: ['openid', 'profile', 'offline_access'],
+    // Whitelist the `persona` query param so it survives across
+    // /authorize and /session/end and is reachable as
+    // `ctx.oidc.params.persona` / `details.params.persona`.
+    extraParams: ['persona'],
     features: {
       devInteractions: { enabled: false },
       revocation: { enabled: true },
@@ -49,8 +54,9 @@ export async function mountOidcProvider(expressApp: Express): Promise<void> {
           } catch {
             stayUrl = '/';
           }
+          const theme = resolveTheme(ctx.oidc.params?.persona);
           ctx.type = 'html';
-          ctx.body = logoutPage({ clientName, form, stayUrl });
+          ctx.body = logoutPage({ clientName, form, stayUrl, theme });
         },
       },
       resourceIndicators: {

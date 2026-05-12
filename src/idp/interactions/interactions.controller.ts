@@ -10,6 +10,7 @@ import {
   verifyAccountPassword,
 } from '../users/user.store';
 import { getVerification, issueCode, verifyCode } from '../users/verifications.store';
+import { resolveTheme } from './personas';
 import { consentPage, loginPage, signupPage, verifyEmailPage } from './templates';
 
 async function clientNameFor(provider: any, clientId: string | undefined): Promise<string> {
@@ -26,10 +27,11 @@ export class InteractionsController {
     const details = await provider.interactionDetails(req, res);
     const clientId = details.params.client_id as string | undefined;
     const clientName = await clientNameFor(provider, clientId);
+    const theme = resolveTheme(details.params.persona);
 
     if (details.prompt.name === 'login') {
       res.setHeader('content-type', 'text/html; charset=utf-8');
-      res.send(loginPage({ uid: details.uid, clientName }));
+      res.send(loginPage({ uid: details.uid, clientName, theme }));
       return;
     }
 
@@ -41,7 +43,7 @@ export class InteractionsController {
         {};
       const scopes = [...oidcScopes, ...Object.values(resourceScopes).flat()];
       res.setHeader('content-type', 'text/html; charset=utf-8');
-      res.send(consentPage({ uid: details.uid, clientName, scopes }));
+      res.send(consentPage({ uid: details.uid, clientName, scopes, theme }));
       return;
     }
 
@@ -67,11 +69,18 @@ export class InteractionsController {
       return;
     }
 
+    const theme = resolveTheme(details.params.persona);
     const account = await verifyAccountPassword({ clientId, email, password });
     if (!account) {
       res.status(400).setHeader('content-type', 'text/html; charset=utf-8');
       res.send(
-        loginPage({ uid: details.uid, clientName, email, error: 'Invalid email or password.' }),
+        loginPage({
+          uid: details.uid,
+          clientName,
+          email,
+          error: 'Invalid email or password.',
+          theme,
+        }),
       );
       return;
     }
@@ -103,8 +112,9 @@ export class InteractionsController {
       return;
     }
     const clientName = await clientNameFor(provider, details.params.client_id as string);
+    const theme = resolveTheme(details.params.persona);
     res.setHeader('content-type', 'text/html; charset=utf-8');
-    res.send(signupPage({ uid: details.uid, clientName }));
+    res.send(signupPage({ uid: details.uid, clientName, theme }));
   }
 
   @Post(':uid/signup')
@@ -128,9 +138,10 @@ export class InteractionsController {
     const password = body.password || '';
     const confirm = body.confirm || '';
 
+    const theme = resolveTheme(details.params.persona);
     const renderError = (error: string) => {
       res.status(400).setHeader('content-type', 'text/html; charset=utf-8');
-      res.send(signupPage({ uid: details.uid, clientName, email, error }));
+      res.send(signupPage({ uid: details.uid, clientName, email, error, theme }));
     };
 
     if (password !== confirm) return renderError('Passwords do not match.');
@@ -173,6 +184,7 @@ export class InteractionsController {
       return;
     }
     const clientName = await clientNameFor(provider, details.params.client_id as string);
+    const theme = resolveTheme(details.params.persona);
     res.setHeader('content-type', 'text/html; charset=utf-8');
     res.send(
       verifyEmailPage({
@@ -180,6 +192,7 @@ export class InteractionsController {
         clientName,
         email: account.email,
         verificationId: vid,
+        theme,
       }),
     );
   }
@@ -230,6 +243,7 @@ export class InteractionsController {
           email: account.email,
           verificationId: vid,
           error,
+          theme: resolveTheme(details.params.persona),
         }),
       );
       return;
