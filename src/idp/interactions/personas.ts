@@ -15,30 +15,47 @@ export interface PersonaTheme {
   accentContrast: string;
 }
 
-const GIGI: PersonaTheme = {
-  bg: '#262627',
-  surface: '#1f1f20',
-  surfaceElevated: '#2c2c2e',
-  accent: '#f5b916',
-  accentContrast: '#1a1a1b',
+export interface PersonaInfo {
+  /** Human-readable display name shown on IdP screens in place of the
+   *  bare OAuth client name when the RP bubbles a persona. */
+  name: string;
+  theme: PersonaTheme;
+}
+
+const GIGI: PersonaInfo = {
+  name: 'Gigi the Robot',
+  theme: {
+    bg: '#262627',
+    surface: '#1f1f20',
+    surfaceElevated: '#2c2c2e',
+    accent: '#f5b916',
+    accentContrast: '#1a1a1b',
+  },
 };
 
-const GIGINA: PersonaTheme = {
-  bg: '#262627',
-  surface: '#1f1f20',
-  surfaceElevated: '#2c2c2e',
-  accent: '#ec5e9b',
-  accentContrast: '#1a1a1b',
+const GIGINA: PersonaInfo = {
+  name: 'Gigina Robotina',
+  theme: {
+    bg: '#262627',
+    surface: '#1f1f20',
+    surfaceElevated: '#2c2c2e',
+    accent: '#ec5e9b',
+    accentContrast: '#1a1a1b',
+  },
 };
 
-const PERSONAS: Record<string, PersonaTheme> = {
+const PERSONAS: Record<string, PersonaInfo> = {
   'gigi-the-robot': GIGI,
   'gigina-robotina': GIGINA,
 };
 
-export const DEFAULT_THEME = GIGI;
+export const DEFAULT_THEME = GIGI.theme;
 
 export function resolveTheme(personaId: unknown): PersonaTheme {
-  if (typeof personaId !== 'string') return DEFAULT_THEME;
-  return PERSONAS[personaId] ?? DEFAULT_THEME;
+  return resolvePersona(personaId)?.theme ?? DEFAULT_THEME;
+}
+
+export function resolvePersona(personaId: unknown): PersonaInfo | null {
+  if (typeof personaId !== 'string') return null;
+  return PERSONAS[personaId] ?? null;
 }

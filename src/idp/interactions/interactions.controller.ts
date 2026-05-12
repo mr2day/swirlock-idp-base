@@ -10,13 +10,25 @@ import {
   verifyAccountPassword,
 } from '../users/user.store';
 import { getVerification, issueCode, verifyCode } from '../users/verifications.store';
-import { resolveTheme } from './personas';
+import { resolvePersona, resolveTheme } from './personas';
 import { consentPage, loginPage, signupPage, verifyEmailPage } from './templates';
 
 async function clientNameFor(provider: any, clientId: string | undefined): Promise<string> {
   if (!clientId) return 'Unknown app';
   const client = await provider.Client.find(clientId);
   return client?.clientName || clientId || 'Unknown app';
+}
+
+/**
+ * What to display as "the app the user is authenticating with". A
+ * relying party may host multiple personas backed by one OAuth client
+ * (e.g. swirlock-chatbot-ui surfaces both "Gigi the Robot" and
+ * "Gigina Robotina"). When the RP bubbles `?persona=<id>`, the
+ * persona's display name wins; otherwise we fall back to the
+ * registered client name.
+ */
+function displayNameFor(personaId: unknown, clientName: string): string {
+  return resolvePersona(personaId)?.name ?? clientName;
 }
 
 @Controller('interaction')
@@ -26,7 +38,10 @@ export class InteractionsController {
     const provider = getProvider();
     const details = await provider.interactionDetails(req, res);
     const clientId = details.params.client_id as string | undefined;
-    const clientName = await clientNameFor(provider, clientId);
+    const clientName = displayNameFor(
+      details.params.persona,
+      await clientNameFor(provider, clientId),
+    );
     const theme = resolveTheme(details.params.persona);
 
     if (details.prompt.name === 'login') {
@@ -60,7 +75,10 @@ export class InteractionsController {
     const provider = getProvider();
     const details = await provider.interactionDetails(req, res);
     const clientId = details.params.client_id as string | undefined;
-    const clientName = await clientNameFor(provider, clientId);
+    const clientName = displayNameFor(
+      details.params.persona,
+      await clientNameFor(provider, clientId),
+    );
     const email = (body.email || '').trim();
     const password = body.password || '';
 
@@ -111,7 +129,10 @@ export class InteractionsController {
       res.status(400).send('Signup is only available during a login prompt.');
       return;
     }
-    const clientName = await clientNameFor(provider, details.params.client_id as string);
+    const clientName = displayNameFor(
+      details.params.persona,
+      await clientNameFor(provider, details.params.client_id as string),
+    );
     const theme = resolveTheme(details.params.persona);
     res.setHeader('content-type', 'text/html; charset=utf-8');
     res.send(signupPage({ uid: details.uid, clientName, theme }));
@@ -127,7 +148,10 @@ export class InteractionsController {
     const provider = getProvider();
     const details = await provider.interactionDetails(req, res);
     const clientId = details.params.client_id as string | undefined;
-    const clientName = await clientNameFor(provider, clientId);
+    const clientName = displayNameFor(
+      details.params.persona,
+      await clientNameFor(provider, clientId),
+    );
 
     if (!clientId) {
       res.status(400).send('Missing client_id in interaction.');
@@ -183,7 +207,10 @@ export class InteractionsController {
       res.status(400).send('Account not found.');
       return;
     }
-    const clientName = await clientNameFor(provider, details.params.client_id as string);
+    const clientName = displayNameFor(
+      details.params.persona,
+      await clientNameFor(provider, details.params.client_id as string),
+    );
     const theme = resolveTheme(details.params.persona);
     res.setHeader('content-type', 'text/html; charset=utf-8');
     res.send(
@@ -223,7 +250,10 @@ export class InteractionsController {
       res.status(400).send('Account not found.');
       return;
     }
-    const clientName = await clientNameFor(provider, details.params.client_id as string);
+    const clientName = displayNameFor(
+      details.params.persona,
+      await clientNameFor(provider, details.params.client_id as string),
+    );
 
     const result = await verifyCode(vid, code);
     if (!result.ok) {
@@ -282,7 +312,10 @@ export class InteractionsController {
       res.status(400).send('Account not found.');
       return;
     }
-    const clientName = await clientNameFor(provider, details.params.client_id as string);
+    const clientName = displayNameFor(
+      details.params.persona,
+      await clientNameFor(provider, details.params.client_id as string),
+    );
     await this.sendCodeAndRedirect(res, details.uid, account, clientName);
   }
 

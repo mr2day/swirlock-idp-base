@@ -6,7 +6,7 @@ import { loadOrGenerateJwks, loadOrGenerateCookieKeys } from './keys/jwks';
 import { SqliteAdapter } from './storage/sqlite-adapter';
 import { db } from './storage/db';
 import { logoutPage } from './interactions/templates';
-import { resolveTheme } from './interactions/personas';
+import { resolvePersona, resolveTheme } from './interactions/personas';
 
 const importESM = new Function('m', 'return import(m)') as <T>(m: string) => Promise<T>;
 
@@ -44,8 +44,15 @@ export async function mountOidcProvider(expressApp: Express): Promise<void> {
         enabled: true,
         async logoutSource(ctx: any, form: string) {
           const clientId = ctx.oidc.client?.clientId as string | undefined;
-          const clientName: string =
+          const registeredClientName: string =
             ctx.oidc.client?.clientName || clientId || 'this app';
+          // oidc-provider's `extraParams` config doesn't extend to the
+          // /session/end endpoint, so `ctx.oidc.params.persona` is
+          // undefined here. The raw query string still carries it
+          // though — read it straight off the request.
+          const personaId = ctx.query?.persona as string | undefined;
+          const persona = resolvePersona(personaId);
+          const clientName = persona?.name ?? registeredClientName;
           const postLogout = (ctx.oidc.params?.post_logout_redirect_uri ||
             '') as string;
           let stayUrl = '/';
@@ -54,7 +61,7 @@ export async function mountOidcProvider(expressApp: Express): Promise<void> {
           } catch {
             stayUrl = '/';
           }
-          const theme = resolveTheme(ctx.oidc.params?.persona);
+          const theme = resolveTheme(personaId);
           ctx.type = 'html';
           ctx.body = logoutPage({ clientName, form, stayUrl, theme });
         },
