@@ -106,9 +106,28 @@ export function markEmailVerified(accountId: string): void {
     .run(Math.floor(Date.now() / 1000), accountId);
 }
 
-export async function findAccount(_ctx: unknown, sub: string): Promise<Account | undefined> {
+export async function findAccount(
+  ctx: { oidc?: { session?: { destroy?: () => Promise<void> } } } | unknown,
+  sub: string,
+): Promise<Account | undefined> {
   const row = readById(sub);
-  if (!row) return undefined;
+  if (!row) {
+    // Session's accountId references an account that no longer exists
+    // (cascade-deleted client, manual deletion, ...). Destroy the
+    // session so the consent / interaction pipeline doesn't crash on
+    // a half-populated `oidc.session` and instead routes the user to
+    // a fresh login prompt.
+    const sess = (ctx as { oidc?: { session?: { destroy?: () => Promise<void> } } })
+      ?.oidc?.session;
+    if (typeof sess?.destroy === 'function') {
+      try {
+        await sess.destroy();
+      } catch {
+        /* best-effort; oidc-provider will still drop the cookie */
+      }
+    }
+    return undefined;
+  }
   return {
     accountId: row.id,
     async claims() {

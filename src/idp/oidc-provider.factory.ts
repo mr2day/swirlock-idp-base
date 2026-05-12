@@ -113,6 +113,33 @@ export async function mountOidcProvider(expressApp: Express): Promise<void> {
   if (idpConfig.behindProxy) {
     providerSingleton.proxy = true;
   }
+
+  // Surface server-side errors to the PM2 log. oidc-provider renders a
+  // generic "oops! something went wrong" page for any internal
+  // exception, which is useless for debugging without the underlying
+  // cause.
+  for (const event of [
+    'server_error',
+    'authorization.error',
+    'grant.error',
+    'interaction.ended',
+    'pushed_authorization_request.error',
+    'backchannel.error',
+  ] as const) {
+    providerSingleton.on(event, (ctx: any, err: unknown) => {
+      const params = ctx?.oidc?.params ?? ctx?.query ?? {};
+      console.error(`[idp] ${event}`, {
+        url: ctx?.url,
+        clientId: params.client_id,
+        redirectUri: params.redirect_uri,
+        err:
+          err instanceof Error
+            ? { name: err.name, message: err.message, stack: err.stack }
+            : err,
+      });
+    });
+  }
+
   expressApp.use(idpConfig.oidcMountPath, providerSingleton.callback());
 }
 
