@@ -5,6 +5,7 @@ import { findAccount } from './users/user.store';
 import { loadOrGenerateJwks, loadOrGenerateCookieKeys } from './keys/jwks';
 import { SqliteAdapter } from './storage/sqlite-adapter';
 import { db } from './storage/db';
+import { logoutPage } from './interactions/templates';
 
 const importESM = new Function('m', 'return import(m)') as <T>(m: string) => Promise<T>;
 
@@ -34,7 +35,24 @@ export async function mountOidcProvider(expressApp: Express): Promise<void> {
       devInteractions: { enabled: false },
       revocation: { enabled: true },
       introspection: { enabled: true },
-      rpInitiatedLogout: { enabled: true },
+      rpInitiatedLogout: {
+        enabled: true,
+        async logoutSource(ctx: any, form: string) {
+          const clientId = ctx.oidc.client?.clientId as string | undefined;
+          const clientName: string =
+            ctx.oidc.client?.clientName || clientId || 'this app';
+          const postLogout = (ctx.oidc.params?.post_logout_redirect_uri ||
+            '') as string;
+          let stayUrl = '/';
+          try {
+            if (postLogout) stayUrl = new URL(postLogout).origin + '/';
+          } catch {
+            stayUrl = '/';
+          }
+          ctx.type = 'html';
+          ctx.body = logoutPage({ clientName, form, stayUrl });
+        },
+      },
       resourceIndicators: {
         defaultResource: () => idpConfig.defaultResource ?? '',
         getResourceServerInfo: async (_ctx, resourceIndicator) => {
