@@ -80,6 +80,14 @@ export async function mountOidcProvider(expressApp: Express): Promise<void> {
         useGrantedResource: () => true,
       },
     },
+    // Token exchange from the Capacitor webview arrives with Origin
+    // `https://localhost` (Capacitor's webview default), which doesn't
+    // match any registered https/redirect URI, so the default
+    // clientBasedCORS rejects it as `invalid_request`. Auth code +
+    // PKCE verifier + exact client_id+redirect_uri matching is the
+    // real protection on /token, not the browser's CORS check —
+    // allow CORS for all origins for our clients.
+    clientBasedCORS: (_ctx: any, _origin: string, _client: any) => true,
     interactions: {
       url(_ctx, interaction) {
         return `/interaction/${interaction.uid}`;
