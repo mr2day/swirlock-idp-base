@@ -84,6 +84,20 @@ export async function mountOidcProvider(expressApp: Express): Promise<void> {
       url(_ctx, interaction) {
         return `/interaction/${interaction.uid}`;
       },
+      // The default policy forces a consent prompt on every login for
+      // native-type clients. We use a single `native` client to back
+      // both web and native shells (so https + custom-scheme URIs can
+      // coexist), and we don't want to re-prompt web users on each
+      // visit. Drop just that check; the rest of the consent flow
+      // still triggers when scopes/claims are missing.
+      policy: (() => {
+        const policy = (oidcModule as any).interactionPolicy.base();
+        const consent = policy.get('consent');
+        if (consent?.checks?.remove) {
+          consent.checks.remove('native_client_prompt');
+        }
+        return policy;
+      })(),
     },
     ttl: {
       AccessToken: 3600,
