@@ -108,12 +108,20 @@ export async function mountOidcProvider(expressApp: Express): Promise<void> {
       })(),
     },
     ttl: {
+      // Access + id tokens stay short — they're refreshed silently
+      // before they expire and we don't want long-lived bearer tokens
+      // floating around if the persistent state ever leaks.
       AccessToken: 3600,
       IdToken: 3600,
-      RefreshToken: 60 * 60 * 24 * 7,
-      Session: 60 * 60 * 24 * 7,
+      // Refresh token, session, and grant get the alpha-comfort
+      // "effectively forever" treatment (1 year). oidc-provider
+      // rotates the refresh token on every use, so this is a sliding
+      // window — the user stays signed in indefinitely as long as
+      // they use the app at least once a year.
+      RefreshToken: 60 * 60 * 24 * 365,
+      Session: 60 * 60 * 24 * 365,
+      Grant: 60 * 60 * 24 * 365,
       Interaction: 600,
-      Grant: 60 * 60 * 24 * 7,
     },
   };
 
