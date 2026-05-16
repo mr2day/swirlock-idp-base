@@ -108,19 +108,26 @@ export async function mountOidcProvider(expressApp: Express): Promise<void> {
       })(),
     },
     ttl: {
-      // Access + id tokens stay short — they're refreshed silently
-      // before they expire and we don't want long-lived bearer tokens
-      // floating around if the persistent state ever leaks.
-      AccessToken: 3600,
-      IdToken: 3600,
-      // Refresh token, session, and grant get the alpha-comfort
-      // "effectively forever" treatment (1 year). oidc-provider
-      // rotates the refresh token on every use, so this is a sliding
-      // window — the user stays signed in indefinitely as long as
-      // they use the app at least once a year.
-      RefreshToken: 60 * 60 * 24 * 365,
-      Session: 60 * 60 * 24 * 365,
-      Grant: 60 * 60 * 24 * 365,
+      // All tokens get an "effectively forever" lifetime (10 years).
+      // This is a personal chatbot, not a high-security system; we
+      // do not deal with sensitive data. Short token TTLs + a
+      // silent-refresh dance buy nothing here and were the cause of
+      // repeated unexpected sign-outs in the SPA — a single network
+      // blip during the silent refresh would log the user out even
+      // though the current token was still valid.
+      //
+      // Tokens stop being usable when:
+      // - the user explicitly signs out
+      // - the IdP forgets the session (data wipe / db reset)
+      // - the user revokes a client
+      //
+      // Not when:
+      // - some arbitrary 1h timer says so.
+      AccessToken: 60 * 60 * 24 * 365 * 10,
+      IdToken: 60 * 60 * 24 * 365 * 10,
+      RefreshToken: 60 * 60 * 24 * 365 * 10,
+      Session: 60 * 60 * 24 * 365 * 10,
+      Grant: 60 * 60 * 24 * 365 * 10,
       Interaction: 600,
     },
   };
